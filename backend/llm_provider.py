@@ -1,4 +1,4 @@
-"""Synchronous Anthropic implementation of the shared provider contract."""
+"""Anthropic chat provider."""
 
 import os
 from pathlib import Path
@@ -12,13 +12,10 @@ __all__ = ['generate_response']
 
 
 def generate_response(message: str, history: list[dict]) -> str:
-    """Return one complete response (synchronous, no streaming).
+    """Generate a reply using prior turns and the current user message.
 
-    history contains prior turns with role ('user' or 'assistant') and content.
-    It excludes the current message. Do not mutate it; include message once.
-    Keep configuration, credentials, model loading, and generation here.
-    Return a non-empty string. Raise TimeoutError for timeouts or another
-    exception on failure. The route handles errors without exposing details.
+    History excludes the current message and is left unchanged.
+    Raises TimeoutError on timeout and RuntimeError on API failure.
     """
     api_key = os.getenv('ANTHROPIC_API_KEY', '').strip()
     if not api_key or api_key == 'your-api-key-here':

@@ -1,19 +1,19 @@
 # Simple Chat
 
-React + Vite + Tailwind frontend and FastAPI backend with a swappable LLM provider. History lives only in React state and is cleared on refresh. No streaming, database, auth, or RAG.
+Chat app built with React, Vite, Tailwind CSS, and FastAPI. Conversation history is stored in React state and cleared on refresh.
 
 ## Provider contract
 
-Only `backend/llm_provider.py` changes between paid and offline implementations. It exports one synchronous function:
+`backend/llm_provider.py` exposes the synchronous interface used by the chat route:
 
 ```python
 def generate_response(message: str, history: list[dict]) -> str:
     ...
 ```
 
-History contains prior `{ "role": "user" | "assistant", "content": "..." }` turns in order, excluding the current message. Include the current message exactly once, leave history unchanged, and return a non-empty string. Keep provider configuration, API calls, credentials, model loading, and prompt formatting inside this module.
+History contains prior `{ "role": "user" | "assistant", "content": "..." }` turns in order, excluding the current message. The provider appends the current message and returns the response text without modifying history.
 
-The current provider uses the official Anthropic Python SDK with `claude-sonnet-4-5`, non-streaming responses, and `max_tokens=1024`. Replacing this module with a local provider requires no route or frontend changes; install that provider's dependencies/model assets as needed.
+The provider uses the official Anthropic Python SDK with `claude-sonnet-4-5`, non-streaming responses, and `max_tokens=1024`. A local provider can implement the same interface without changes to the route or frontend.
 
 ## Anthropic API key
 
@@ -30,11 +30,11 @@ Restart the backend after setting the key. The provider loads this file regardle
 
 This version requires internet access and incurs API usage costs. Full conversation history is sent with each request and contributes to input usage. Check [Anthropic pricing](https://platform.claude.com/docs/en/about-claude/pricing) for current rates. Missing or invalid credentials produce a clean generation error through the shared route.
 
-The synchronous route runs in FastAPI's thread pool. Providers should support concurrent calls or manage model access internally. Raise `TimeoutError` for timeouts (HTTP 504); other failures become generic HTTP 502 errors. The frontend waits up to 75 seconds; providers should bound generation within that time. A browser timeout does not cancel an already-running generation.
+The route runs in FastAPI's thread pool. Provider timeouts return HTTP 504; other generation failures return HTTP 502. The SDK timeout is 60 seconds with automatic retries disabled. The frontend waits up to 75 seconds; a browser timeout does not cancel an already-running generation.
 
 ## Local setup
 
-Requires Node.js 22+ and Python 3.10+. Dependencies and `backend/.venv` already exist in this workspace.
+Requires Node.js 22+ and Python 3.10+.
 
 Backend, from the project root in PowerShell:
 
@@ -45,7 +45,7 @@ py -m venv .venv
 .\.venv\Scripts\python.exe -m uvicorn main:app --reload --host 127.0.0.1 --port 8000
 ```
 
-If `py` points to an inaccessible Windows Store installation, use `& "$env:LOCALAPPDATA\Python\bin\python.exe" -m venv .venv` instead. On macOS/Linux, use `python3 -m venv .venv` and `.venv/bin/python` for pip and uvicorn. Set the API key as described above before sending messages.
+On macOS/Linux, use `python3 -m venv .venv` and `.venv/bin/python` for pip and uvicorn. Set the API key as described above before sending messages.
 
 Frontend, in a second terminal from the project root:
 
